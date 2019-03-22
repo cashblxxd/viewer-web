@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+ 
+{% block content %}
+    <h1>{{ news[1] }}</h1>
+    <h4>Owner: <a href="/users/{{ owner_id }}">{{ owner_name }}</a></h4>
+    {% if owner == True %}
+        <h2>Allowed users:</h2>
+        {% for user in permissions %}
+            <a href="/users/{{ user }}">{{ usernames[user] }} </a>
+        {% endfor %}
+        <a href="/add_permission/{{ news[0] }}" class="btn btn-success" role="button">Add users</a>
+        <a href="/delete_permission/{{ news[0] }}" class="btn btn-danger" role="button">Kick users</a>
+    {% endif %}
+    <h3>Описание:</h3>
+    <h6>{{ news[2] }}</h6>
+    <h3>Файл:</h3><a href="/get_upload/{{ news[0] }}/{{ news[4] }}">{{ filename }}</a>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+ 
+{% block content %}
+    <h1>{{ news[1] }}</h1>
+    {% for user in displayed %}
+        <a href="/submit_user_deleted/{{ news[0] }}/{{ user }}">{{ userlist[user] }} </a>
+    {% endfor %}
+{% endblock %}
