@@ -1,5 +1,5 @@
 from flask import *
-from forms import AddNewsForm, ChangePasswordForm, LoginForm, SignUpForm
+from forms import AddNewsForm, ChangePasswordForm, LoginForm, SignUpForm, ChangeDescriptionForm
 from db_connect import *
 import os
 from flask import request, redirect
@@ -11,6 +11,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 UPLOAD_FOLDER = '/home/mint/Documents/file_database/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.system(f'mkdir {UPLOAD_FOLDER}')
 
 
 @app.errorhandler(404)
@@ -42,11 +43,12 @@ def signup():
         user_name = form.username.data
         password = form.password.data
         user_model = UserModel(db.get_connection())
-        exists = user_model.exists(user_name, password)
+        exists = user_model.exists(user_name)
         if not exists[0]:
             user_model.insert(user_name, password)
-        return redirect("/index")
-    return render_template('signup.html', title='Регистрация', form=form)    
+            return redirect("/login")
+        return render_template('signup.html', title='Регистрация', form=form, attempt=True)
+    return render_template('signup.html', title='Регистрация', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -56,10 +58,10 @@ def login():
         user_name = form.username.data
         password = form.password.data
         user_model = UserModel(db.get_connection())
-        exists = user_model.exists(user_name, password)
-        if exists[0]:
+        success = user_model.login(user_name, password)
+        if success[0]:
             session['username'] = user_name
-            session['user_id'] = exists[1]
+            session['user_id'] = success[1]
             return redirect("/index")
         return render_template('login.html', title='Авторизация', form=form, attempt=True)
     return render_template('login.html', title='Авторизация', form=form)
@@ -72,16 +74,12 @@ def logout():
     return redirect('/index')
 
 
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-
 @app.route('/get_upload/<string:news_id>/<string:file_name>', methods=['GET', 'POST'])
 def get_upload(news_id, file_name):
-    if session['user_id'] not in Permissions(db.get_connection()).get_news_permissions(news_id):
-        redirect('/access_denied')
-    return send_from_directory(app.config['UPLOAD_FOLDER'], file_name)
+    if session['user_id'] in Permissions(db.get_connection()).get_news_permissions(news_id)\
+            and file_name in NewsModel(db.get_connection()).get(news_id):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], file_name)
+    return redirect('/access_denied')
 
 
 @app.route('/add_news', methods=['GET', 'POST'])
@@ -115,6 +113,19 @@ def delete_news(news_id):
     nm = Permissions(db.get_connection())
     nm.delete_news(news_id)
     return redirect("/index")
+
+
+@app.route('/delete_user/<int:user_id>', methods=['GET'])
+def delete_user(user_id):
+    if 'username' not in session:
+        return redirect('/login')
+    nm = UserModel(db.get_connection())
+    if str(session['user_id']) != str(user_id):
+        return redirect('/access_denied')
+    nm.delete(user_id)
+    nm = Permissions(db.get_connection())
+    nm.delete_user(user_id)
+    return redirect("/logout")
 
 
 @app.route('/news_page/<int:news_id>', methods=['GET'])
@@ -152,6 +163,29 @@ def add_permission(news_id):
                            news=news, userlist=userlist)
 
 
+@app.route('/make_public/<int:news_id>')
+def make_public(news_id):
+    news = NewsModel(db.get_connection()).get(news_id)
+    if str(news[3]) != str(session['user_id']):
+        return redirect('/access_denied')
+    nm = Permissions(db.get_connection())
+    for idx, name in UserModel(db.get_connection()).get_all():
+        nm.add_permission(news_id, idx)
+    return redirect(f'news_page/{news_id}')
+
+
+@app.route('/make_private/<int:news_id>')
+def make_private(news_id):
+    news = NewsModel(db.get_connection()).get(news_id)
+    if str(news[3]) != str(session['user_id']):
+        return redirect('/access_denied')
+    nk = Permissions(db.get_connection())
+    for idx in nk.get_news_permissions(news_id):
+        if str(session['user_id']) != str(idx):
+            nk.delete_permission(news_id, idx)
+    return redirect(f'news_page/{news_id}')
+
+
 @app.route('/delete_permission/<int:news_id>')
 def delete_permission(news_id):
     news = NewsModel(db.get_connection()).get(news_id)
@@ -185,10 +219,19 @@ def user_page(user_id):
     owner = user_id == session['user_id']
     uname = user.get(user_id)
     form = ChangePasswordForm()
-    if form.validate_on_submit():
+    form1 = ChangeDescriptionForm()
+    if form.validate_on_submit() and form.new_password.data != '':
         UserModel(db.get_connection()).change_password(user_id, form.new_password.data)
-        return render_template('user_page.html', username=uname[1], form=form, title=uname[1], owner=owner, success=True)
-    return render_template('user_page.html', username=uname[1], title=uname[1], owner=owner, form=form)
+        uname = user.get(user_id)
+        return render_template('user_page.html', username=uname[1], form=form, form1=form1, title=uname[1],
+                               owner=owner, success_pass=True, user_id=uname[0], description=uname[3])
+    if form1.validate_on_submit():
+        UserModel(db.get_connection()).change_description(user_id, form1.new_description.data)
+        uname = user.get(user_id)
+        return render_template('user_page.html', username=uname[1], form=form, form1=form1, title=uname[1], owner=owner,
+                               success_desc=True, user_id=uname[0], description=uname[3])
+    return render_template('user_page.html', username=uname[1], title=uname[1], owner=owner,
+                           form=form, form1=form1, description=uname[3], user_id=uname[0])
 
 
 if __name__ == '__main__':

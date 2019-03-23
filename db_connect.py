@@ -28,12 +28,13 @@ class Permissions:
         self.connection.commit()
 
     def add_permission(self, news_id, user_id):
-        cursor = self.connection.cursor()
-        cursor.execute('''INSERT INTO permissions
-                          (news_id, user_id) 
-                          VALUES (?,?)''', (str(news_id), str(user_id)))
-        cursor.close()
-        self.connection.commit()
+        if not self.exists(news_id, user_id)[0]:
+            cursor = self.connection.cursor()
+            cursor.execute('''INSERT INTO permissions
+                              (news_id, user_id) 
+                              VALUES (?,?)''', (str(news_id), str(user_id)))
+            cursor.close()
+            self.connection.commit()
 
     def get_news_permissions(self, news_id=None):
         cursor = self.connection.cursor()
@@ -101,7 +102,8 @@ class UserModel:
         cursor.execute('''CREATE TABLE IF NOT EXISTS users 
                             (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                              user_name VARCHAR(50),
-                             password_hash VARCHAR(128)
+                             password_hash VARCHAR(128),
+                             description VARCHAR(1000)
                              )''')
         cursor.close()
         self.connection.commit()
@@ -109,8 +111,8 @@ class UserModel:
     def insert(self, user_name, password_hash):
         cursor = self.connection.cursor()
         cursor.execute('''INSERT INTO users 
-                          (user_name, password_hash) 
-                          VALUES (?,?)''', (user_name, password_hash))
+                          (user_name, password_hash, description) 
+                          VALUES (?,?,?)''', (user_name, password_hash, 'No description provided'))
         cursor.close()
         self.connection.commit()
 
@@ -137,7 +139,14 @@ class UserModel:
             ans[i[0]] = i[1]
         return ans
 
-    def exists(self, user_name, password_hash):
+    def exists(self, user_name):
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT * FROM users WHERE user_name = ?",
+                       (user_name,))
+        row = cursor.fetchone()
+        return (True, row[0]) if row else (False,)
+
+    def login(self, user_name, password_hash):
         cursor = self.connection.cursor()
         cursor.execute("SELECT * FROM users WHERE user_name = ? AND password_hash = ?",
                        (user_name, password_hash))
@@ -149,6 +158,19 @@ class UserModel:
         cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?",
                        (new_password, user_id))
         print('Password changed!')
+        cursor.close()
+        self.connection.commit()
+
+    def change_description(self, user_id, new_description):
+        cursor = self.connection.cursor()
+        cursor.execute("UPDATE users SET description = ? WHERE id = ?",
+                       (new_description, user_id))
+        cursor.close()
+        self.connection.commit()
+
+    def delete(self, user_id):
+        cursor = self.connection.cursor()
+        cursor.execute('''DELETE FROM users WHERE id = ?''', (str(user_id)))
         cursor.close()
         self.connection.commit()
 

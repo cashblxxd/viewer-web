@@ -12,14 +12,19 @@ class AddNewsForm(FlaskForm):
 
 
 class ChangePasswordForm(FlaskForm):
-    new_password = PasswordField('Новый пароль', validators=[DataRequired()])
+    new_password = PasswordField('Новый пароль')  # , validators=[DataRequired()])
+    submit = SubmitField('Сохранить')
+
+
+class ChangeDescriptionForm(FlaskForm):
+    new_description = TextAreaField('Новое описание')  # , validators=[DataRequired()])
     submit = SubmitField('Сохранить')
 
 
 class SignUpForm(FlaskForm):
     username = StringField('Логин', validators=[DataRequired()])
     password = PasswordField('Пароль', validators=[DataRequired()])
-    submit = SubmitField('Войти')
+    submit = SubmitField('Зарегистрироваться')
 
 
 class LoginForm(FlaskForm):

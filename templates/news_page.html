@@ -10,6 +10,8 @@
         {% endfor %}
         <a href="/add_permission/{{ news[0] }}" class="btn btn-success" role="button">Add users</a>
         <a href="/delete_permission/{{ news[0] }}" class="btn btn-danger" role="button">Kick users</a>
+        <a href="/make_public/{{ news[0] }}" class="btn btn-primary">Publish</a>
+        <a href="/make_private/{{ news[0] }}" class="btn btn-warning">Make private</a>
     {% endif %}
     <h3>Описание:</h3>
     <h6>{{ news[2] }}</h6>
