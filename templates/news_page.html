@@ -1,13 +1,24 @@
 {% extends "base.html" %}
- 
+
 {% block content %}
     <h1>{{ news[1] }}</h1>
     <h4>Owner: <a href="/users/{{ owner_id }}">{{ owner_name }}</a></h4>
     {% if owner == True %}
         <h2>Allowed users:</h2>
-        {% for user in permissions %}
-            <a href="/users/{{ user }}">{{ usernames[user] }} </a>
-        {% endfor %}
+        {% if is_private == True %}
+            <div class="alert alert-danger" role="alert">
+                Private
+            </div>
+        {% endif %}
+        {% if is_public == True %}
+            <div class="alert alert-success" role="alert">
+                Public
+            </div>
+        {% elif is_private == False %}
+            {% for user in permissions %}
+                <a href="/users/{{ user }}">{{ usernames[user] }} </a>
+            {% endfor %}
+        {% endif %}
         <a href="/add_permission/{{ news[0] }}" class="btn btn-success" role="button">Add users</a>
         <a href="/delete_permission/{{ news[0] }}" class="btn btn-danger" role="button">Kick users</a>
         <a href="/make_public/{{ news[0] }}" class="btn btn-primary">Publish</a>
