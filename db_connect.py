@@ -91,6 +91,7 @@ class Permissions:
         row = cursor.fetchone()
         return (True, row[0]) if row else (False,)
 
+
 class UserModel:
     
     def __init__(self, connection):
@@ -198,6 +199,7 @@ class NewsModel:
         cursor.execute('''INSERT INTO news 
                           (title, content, user_id, filename) 
                           VALUES (?,?,?,?)''', (title, content, str(user_id), filename))
+        print('Success!!')
         cursor.close()
         self.connection.commit()
         cursor = self.connection.cursor()
@@ -215,7 +217,7 @@ class NewsModel:
         row = cursor.fetchone()
         return row
  
-    def get_all(self, user_id = None):
+    def get_all(self, user_id=None):
         cursor = self.connection.cursor()
         if user_id:
             cursor.execute("SELECT * FROM news WHERE user_id = ?",

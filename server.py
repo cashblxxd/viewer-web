@@ -5,11 +5,12 @@ import os
 from flask import request, redirect
 from werkzeug.utils import secure_filename
 from flask import Flask
+from RESTful import *
 
 db = DB()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
-UPLOAD_FOLDER = '/home/mint/Documents/file_database/'
+UPLOAD_FOLDER = 'file_database/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.system(f'mkdir {UPLOAD_FOLDER}')
 
@@ -163,7 +164,7 @@ def add_permission(news_id):
                            news=news, userlist=userlist)
 
 
-@app.route('/make_public/<int:news_id>')
+@app.route('/make_public/<int:news_id>', methods=['GET'])
 def make_public(news_id):
     news = NewsModel(db.get_connection()).get(news_id)
     if str(news[3]) != str(session['user_id']):
@@ -174,7 +175,7 @@ def make_public(news_id):
     return redirect(f'news_page/{news_id}')
 
 
-@app.route('/make_private/<int:news_id>')
+@app.route('/make_private/<int:news_id>', methods=['GET'])
 def make_private(news_id):
     news = NewsModel(db.get_connection()).get(news_id)
     if str(news[3]) != str(session['user_id']):

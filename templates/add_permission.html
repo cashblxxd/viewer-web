@@ -3,6 +3,6 @@
 {% block content %}
     <h1>{{ news[1] }}</h1>
     {% for user in userlist %}
-        <a href="/submit_user_added/{{ news[0] }}/{{ user[0] }}">{{ user[1] }} </a>
+        <a href="/submit_user_added/{{ news[0] }}/{{ user[0] }}">{{ user[1] }}</a>
     {% endfor %}
 {% endblock %}
