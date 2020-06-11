@@ -9,9 +9,9 @@
   <body>
     <header>
       <nav class="navbar navbar-light bg-light">
-        <a class="navbar-brand" href="/index">Viewer</a>
+        <a class="navbar-brand" href="/index">OZON Seller</a>
         {% if "username" in session %}
-   			<a class="navbar-brand" href="/panel">{{session['username']}}</a>
+   			<a class="navbar-brand" href="/panel">{{session['username']}}</a> <a class="navbar-brand" href="/downloads">Загрузки</a>
 		{% endif %}
       </nav>
     </header>

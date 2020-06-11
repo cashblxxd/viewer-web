@@ -6,17 +6,15 @@ from flask import request, redirect
 from werkzeug.utils import secure_filename
 from flask import Flask
 #from RESTful import *
-from ozon_api import get_postings_info
+from ozon_api import get_postings_info, get_markings
 from json import load, dump
 from threading import Thread
 from multiprocessing import Process
+import os
 
 db = DB()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
-UPLOAD_FOLDER = 'file_database/'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.system(f'mkdir {UPLOAD_FOLDER}')
 
 
 @app.errorhandler(404)
@@ -34,9 +32,49 @@ def check_postings(uid):
         return False
 
 
-@app.route('/')
-@app.route('/index')
+def print_markings(posting_numbers):
+    get_markings(session['api_key'], session["client_id"], posting_numbers, session["user_id"])
+
+
+@app.route('/downloads', methods=['GET', 'POST'])
+def download_center():
+    path = f'./{session["user_id"]}'
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    files = os.listdir(path)
+    return render_template('downloads.html', files=files, is_empty=(len(files) == 0))
+
+
+@app.route('/get_download/<filename>', methods=['GET', 'POST'])
+def get_download(filename):
+    if os.path.isfile(f'./{session["user_id"]}/{filename}'):
+        return send_from_directory(f'./{session["user_id"]}/',
+                                   filename, as_attachment=True)
+    return redirect("/downloads")
+
+
+@app.route('/delete/<filename>', methods=['GET', 'POST'])
+def delete(filename):
+    if os.path.isfile(f'./{session["user_id"]}/{filename}'):
+        os.remove(f'./{session["user_id"]}/{filename}')
+    return redirect("/downloads")
+
+
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/index', methods=['GET', 'POST'])
 def index():
+    if request.method == 'POST':
+        posting_numbers = request.form.getlist('posting_labels')
+        print(posting_numbers)
+        if posting_numbers:
+            with app.app_context():
+                thread = Process(target=print_markings, args=(posting_numbers,))
+                thread.daemon = True
+                thread.start()
+                with open("postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+                    s = load(f)
+                return render_template('index.html', username=session['username'],
+                                       postings_data=s, markings_started=True)
     print("!!!!!!!!!!!")
     if 'username' not in session:
         return redirect('/start')

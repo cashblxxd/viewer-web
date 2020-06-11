@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from zipfile import ZipFile
 import dateutil.relativedelta
 from json import load
+from PyPDF2 import PdfFileMerger
+import os
 
 
 def get_items_ids(shop_api_key, client_id):
@@ -216,7 +218,7 @@ def get_product_image(sku, shop_api_key, client_id):
 def get_price(product):
     s = str(product.get("price", "-"))
     if s == '-':
-        return
+        return '-'
     return str(float(s))
 
 
@@ -239,7 +241,7 @@ def get_posting_info(r, shop_api_key, client_id):
 
 def get_postings_info(shop_api_key, client_id, uid='-'):
     print("Starting...")
-    s = {}
+    s = []
     try:
         with open("postings_" + str(uid) + '.json', 'r+', encoding='utf-8') as f:
             s = load(f)
@@ -247,10 +249,48 @@ def get_postings_info(shop_api_key, client_id, uid='-'):
         print(e)
     d = set()
     for i in s:
-        d.add(s["Номер заказа"])
-    postings_list = [i for i in get_postings_list(shop_api_key, client_id) if i not in d]
-    postings_add = [get_posting_info(i, shop_api_key, client_id) for i in postings_list]
-    return postings_add + postings_list
+        d.add(i["order_number"])
+    postings_add = [get_posting_info(i, shop_api_key, client_id) for i in
+                    [i for i in get_postings_list(shop_api_key, client_id) if i["order_number"] not in d]]
+    #pprint(postings_add)
+    return postings_add + s
+
+
+def get_markings(shop_api_key, client_id, posting_numbers, user_id):
+    filenames = []
+    for i in range(0, len(posting_numbers), 20):
+        filename = str(client_id) + "_" + str(i) + ".pdf"
+        filenames.append(filename)
+        headers = {
+            'Client-Id': str(client_id),
+            'Api-Key': shop_api_key,
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            "posting_number": posting_numbers,
+        }
+        r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/package-label", headers=headers, json=payload)
+        try:
+            s = r.json()
+            if s["error"]["code"] == "POSTINGS_NOT_READY":
+                return False, s["error"]["message"]
+        except Exception:
+            pass
+        with open(filename, 'wb') as f:
+            f.write(r.content)
+    merger = PdfFileMerger()
+
+    for pdf in filenames:
+        merger.append(pdf)
+
+    path = f'./{user_id}'
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    merger.write(path + f"/Маркировки {datetime.now().strftime('%H:%M:%S %m.%d.%Y')}.pdf")
+    merger.close()
+    for path in filenames:
+        os.remove(path)
+    return (True,)
 
 
 def dump_postings_csv(shop_api_key, client_id, name):

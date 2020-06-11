@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    {% if is_empty %}
+        <div class="alert alert-success" role="alert">
+            Файлов пока нет
+        </div>
+    {% else %}
+        {% for filename in files %}
+            <div class="alert alert-light" role="alert">
+                <a href="/get_download/{{ filename }}">{{ filename }}</a>
+                <a href="/delete/{{ filename }}">🗑</a>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+{% endblock %}

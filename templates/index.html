@@ -73,12 +73,17 @@
     <div id="myDIV" style="visibility:hidden">
         Нажмите на <a href="/updater" target="_blank">ссылку</a> и не закрывайте вкладку, пока страница не обновится. Спасибо!
     </div>
-    <form name="myForm" action="" method="post" onsubmit="">
-    <input type=submit value=Next>
+    <form method="post">
+    <input type=submit value="Распечатать маркировки">
+    {% if markings_started == True %}
+        <div class="alert alert-success" role="alert">
+            Маркировки формируются, зайдите в Загрузки
+        </div>
+    {% endif %}
     <table id="MyTable" class="display" cellspacing="0" width="95%">
         <thead>
             <tr>
-                <th class="th-sm"><input type="checkbox" value="all" class="danger" name='my_checkbox'></th>
+                <th class="th-sm">‎</th>
                 <th class="th-sm">Принят в обработку</th>
                 <th class="th-sm">Номер заказа</th>
                 <th class="th-sm">Номер отправления</th>
@@ -90,7 +95,7 @@
         </thead>
         {% for item in postings_data %}
         <tr>
-            <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='my_checkbox'></td>
+            <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='posting_labels'></td>
             {% for key, value in item.items() %}
                 {% if value.startswith("http") %}
                     <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
@@ -103,5 +108,6 @@
         </tr>
         {% endfor %}
     </table>
+    </form>
 
 {% endblock %}

@@ -1,3 +1,4 @@
+pypdf2
 python-dateutil
 gunicorn
 flask_wtf
