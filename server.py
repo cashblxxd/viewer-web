@@ -9,6 +9,7 @@ from flask import Flask
 from ozon_api import get_postings_info
 from json import load, dump
 from threading import Thread
+from multiprocessing import Process
 
 db = DB()
 app = Flask(__name__)
@@ -63,10 +64,11 @@ def updater():
     if session['api_key'] == '-' or session['client_id'] == '-':
         return render_template('no_apikey.html')
     try:
-        thread = Thread(target=get_postings, args=())
-        thread.daemon = True
-        thread.start()
-        return render_template("loading.html")
+        with app.app_context():
+            thread = Process(target=get_postings, args=())
+            thread.daemon = True
+            thread.start()
+            return render_template("loading.html")
     except Exception:
         return render_template('no_apikey.html')
 
@@ -298,4 +300,5 @@ def user_page():
 
 
 if __name__ == '__main__':
-    app.run(port=8080, host='127.0.0.1')
+    app.run(port=8080, host='127.0.0.1', threaded=True)
+    app.app_context().push()
