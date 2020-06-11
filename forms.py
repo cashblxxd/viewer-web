@@ -16,8 +16,13 @@ class ChangePasswordForm(FlaskForm):
     submit = SubmitField('Сохранить')
 
 
-class ChangeDescriptionForm(FlaskForm):
-    new_description = TextAreaField('Новое описание')  # , validators=[DataRequired()])
+class ChangeApiKeyForm(FlaskForm):
+    new_apikey = TextAreaField('Новый api ключ')  # , validators=[DataRequired()])
+    submit = SubmitField('Сохранить')
+
+
+class ChangeClientIDForm(FlaskForm):
+    new_clientid = TextAreaField('Новый Client ID')  # , validators=[DataRequired()])
     submit = SubmitField('Сохранить')
 
 

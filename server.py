@@ -1,11 +1,13 @@
 from flask import *
-from forms import AddNewsForm, ChangePasswordForm, LoginForm, SignUpForm, ChangeDescriptionForm
+from forms import AddNewsForm, ChangePasswordForm, LoginForm, SignUpForm, ChangeApiKeyForm, ChangeClientIDForm
 from db_connect import *
 import os
 from flask import request, redirect
 from werkzeug.utils import secure_filename
 from flask import Flask
-from RESTful import *
+#from RESTful import *
+from ozon_api import get_postings_info
+from json import load, dump
 
 db = DB()
 app = Flask(__name__)
@@ -23,13 +25,40 @@ def not_found(error):
 @app.route('/')
 @app.route('/index')
 def index():
+    print("!!!!!!!!!!!")
     if 'username' not in session:
         return redirect('/start')
-    md = NewsModel(db.get_connection())
-    news = md.get_all(session['user_id'])
-    h = set(Permissions(db.get_connection()).get_user_permissions(session['user_id']))
+    if session['api_key'] == '-' or session['client_id'] == '-':
+        return render_template('no_apikey.html')
+    if 'postings_data' not in session or not session["postings_data"]:
+        return redirect("/upgrade")
+    with open("postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+        s = load(f)
     return render_template('index.html', username=session['username'],
-                           news=news, affordable=[md.get(i) for i in h])
+                           postings_data=s)
+
+
+@app.route('/updater')
+def updater():
+    if 'username' not in session:
+        return redirect('/start')
+    if session['api_key'] == '-' or session['client_id'] == '-':
+        return render_template('no_apikey.html')
+    try:
+        postings_data = get_postings_info(session["api_key"], session['client_id'])
+        session["postings_data"] = True
+        with open("postings_" + str(session["user_id"]) + '.json', "w+", encoding='utf-8') as f:
+            dump(postings_data, f, indent=4, ensure_ascii=False)
+        return redirect('/index')
+    except Exception:
+        return render_template('no_apikey.html')
+
+
+@app.route('/upgrade')
+def update():
+    if "update" in request.form:
+        return render_template("loading.html")
+    return render_template('load_postings.html')
 
 
 @app.route('/start')
@@ -63,6 +92,15 @@ def login():
         if success[0]:
             session['username'] = user_name
             session['user_id'] = success[1]
+            session['api_key'] = success[2]
+            session['client_id'] = success[3]
+            try:
+                with open("postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+                    s = load(f)
+                session["postings_data"] = True
+            except Exception as e:
+                print(e)
+                session["postings_data"] = False
             return redirect("/index")
         return render_template('login.html', title='Авторизация', form=form, attempt=True)
     return render_template('login.html', title='Авторизация', form=form)
@@ -72,9 +110,12 @@ def login():
 def logout():
     session.pop('username', 0)
     session.pop('user_id', 0)
+    session.pop('api_key', 0)
+    session.pop('client_id', 0)
+    session.pop('postings_data', 0)
     return redirect('/index')
 
-
+'''
 @app.route('/get_upload/<string:news_id>/<string:file_name>', methods=['GET', 'POST'])
 def get_upload(news_id, file_name):
     if session['user_id'] in Permissions(db.get_connection()).get_news_permissions(news_id)\
@@ -114,21 +155,19 @@ def delete_news(news_id):
     nm = Permissions(db.get_connection())
     nm.delete_news(news_id)
     return redirect("/index")
+'''
 
 
-@app.route('/delete_user/<int:user_id>', methods=['GET'])
-def delete_user(user_id):
+@app.route('/delete_user/', methods=['GET'])
+def delete_user():
     if 'username' not in session:
         return redirect('/login')
     nm = UserModel(db.get_connection())
-    if str(session['user_id']) != str(user_id):
-        return redirect('/access_denied')
-    nm.delete(user_id)
-    nm = Permissions(db.get_connection())
-    nm.delete_user(user_id)
+    nm.delete(session['user_id'])
     return redirect("/logout")
 
 
+'''
 @app.route('/news_page/<int:news_id>', methods=['GET'])
 def news_page(news_id):
     if 'username' not in session:
@@ -147,13 +186,13 @@ def news_page(news_id):
     return render_template('news_page.html', title='Публикация',
                            news=news, permissions=nmm, owner=owner, usernames=usernames.get_id_logins_dictionary(),
                            owner_name=owner_cred[1], owner_id=owner_cred[0], filename=news[4].split('/')[-1])
-
+'''
 
 @app.route('/access_denied')
 def access_denied():
     return '''<h1>Access denied :(</h1>'''
 
-
+'''
 @app.route('/add_permission/<int:news_id>')
 def add_permission(news_id):
     news = NewsModel(db.get_connection()).get(news_id)
@@ -213,26 +252,38 @@ def submit_user_deleted(news_id, user_id):
     h.delete_permission(news_id, user_id)
     return redirect(f'news_page/{news_id}')
 
+'''
 
-@app.route('/users/<int:user_id>', methods=['GET', 'POST'])
-def user_page(user_id):
+
+@app.route('/panel', methods=['GET', 'POST'])
+def user_page():
     user = UserModel(db.get_connection())
-    owner = user_id == session['user_id']
+    user_id = session['user_id']
     uname = user.get(user_id)
+    print(user_id)
+    print(uname)
     form = ChangePasswordForm()
-    form1 = ChangeDescriptionForm()
+    form1 = ChangeApiKeyForm()
+    form2 = ChangeClientIDForm()
     if form.validate_on_submit() and form.new_password.data != '':
         UserModel(db.get_connection()).change_password(user_id, form.new_password.data)
         uname = user.get(user_id)
-        return render_template('user_page.html', username=uname[1], form=form, form1=form1, title=uname[1],
-                               owner=owner, success_pass=True, user_id=uname[0], description=uname[3])
-    if form1.validate_on_submit():
-        UserModel(db.get_connection()).change_description(user_id, form1.new_description.data)
+        return render_template('user_page.html', username=uname[1], form=form, form1=form1, form2=form2, title=uname[1],
+                               success_pass=True, user_id=uname[0], api_key=uname[3], client_id=uname[4])
+    if form1.validate_on_submit() and form1.new_apikey.data != '':
+        UserModel(db.get_connection()).change_api_key(user_id, form1.new_apikey.data)
+        session["api_key"] = form1.new_apikey.data
         uname = user.get(user_id)
-        return render_template('user_page.html', username=uname[1], form=form, form1=form1, title=uname[1], owner=owner,
-                               success_desc=True, user_id=uname[0], description=uname[3])
-    return render_template('user_page.html', username=uname[1], title=uname[1], owner=owner,
-                           form=form, form1=form1, description=uname[3], user_id=uname[0])
+        return render_template('user_page.html', username=uname[1], form=form, form1=form1, form2=form2, title=uname[1],
+                               success_api_key=True, user_id=uname[0], api_key=uname[3], client_id=uname[4])
+    if form2.validate_on_submit() and form2.new_clientid.data != '':
+        UserModel(db.get_connection()).change_client_id(user_id, form2.new_clientid.data)
+        session["client_id"] = form2.new_clientid.data
+        uname = user.get(user_id)
+        return render_template('user_page.html', username=uname[1], form=form, form1=form1, form2=form2, title=uname[1],
+                               success_client_id=True, user_id=uname[0], api_key=uname[3], client_id=uname[4])
+    return render_template('user_page.html', username=uname[1], title=uname[1],
+                           form=form, form1=form1, form2=form2, api_key=uname[3], client_id=uname[4], user_id=uname[0])
 
 
 if __name__ == '__main__':

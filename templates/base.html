@@ -11,7 +11,7 @@
       <nav class="navbar navbar-light bg-light">
         <a class="navbar-brand" href="/index">Viewer</a>
         {% if "username" in session %}
-   			<a class="navbar-brand" href="/users/{{session['user_id']}}">{{session['username']}}</a>
+   			<a class="navbar-brand" href="/panel">{{session['username']}}</a>
 		{% endif %}
       </nav>
     </header>

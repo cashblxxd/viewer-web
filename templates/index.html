@@ -1,23 +1,75 @@
 {% extends "base.html" %}
  
 {% block content %}
+    <style>
+    .zoom {
+        transition: transform .1s;
+    }
+    .zoom:hover {
+        transform: scale(5);
+    }
+    </style>
+    <style>
+        table, th, td {
+            padding: 5px;
+            text-align: center;
+        }
+        table {
+            border-spacing: 15px;
+        }
+    </style>
+    <style>
+        .img-container {
+            text-align: center;
+        }
+    </style>
+    <h1>Отправления с моего склада</h1>
+    <!-- Buttons -->
+    <button id="idb">Обновить</button>
+    <script>
+        function f1() {
+            var x = document.getElementById("myDIV");
+            if (x.style.visibility == "visible"){
+                x.style.visibility = "hidden";
+            } else {
+                x.style.visibility = "visible";
+            }
 
-  <h1>Привет, {{ username }}!</h1>
-    <h2>Созданные</h2>
-  <a href="/add_news">Добавить публикацию</a>
-	{% for item in news %}
-	    <div class="alert alert-dark" role="alert">
-	        <h2><a href="/news_page/{{item[0]}}">{{item[1]}}</a></h2>
-	        <div>{{item[2]}}</div>
-	        <a href="/delete_news/{{item[0]}}">Удалить публикацию</a>
-	    </div>
-	{% endfor %}
-    <h2>Доступные</h2>
-	{% for item in affordable %}
-	    <div class="alert alert-dark" role="alert">
-	        <h2><a href="/news_page/{{item[0]}}">{{item[1]}}</a></h2>
-	        <div>{{item[2]}}</div>
-	    </div>
-	{% endfor %}
+        }
+        var a = document.getElementById("idb")
+        a.addEventListener("click", f1)
+
+    </script>
+    <div id="myDIV" style="visibility:hidden">
+        Нажмите на <a href="/updater" target="_blank">ссылку</a> и не закрывайте вкладку, пока страница не обновится. Спасибо!
+    </div>
+    <form name="myForm" action="" method="post" onsubmit="">
+    <input type=submit value=Next>
+    <table style="width:95%">
+        <tr>
+            <th><input type="checkbox" value="all" class="danger" name='my_checkbox'></th>
+            <th>Принят в обработку</th>
+            <th>Номер заказа</th>
+            <th>Номер отправления</th>
+            <th>Детали отправления</th>
+            <th>Картинка</th>
+            <th>Стоимость</th>
+            <th>Дата отгрузки</th>
+        </tr>
+        {% for item in postings_data %}
+        <tr>
+            <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='my_checkbox'></td>
+            {% for key, value in item.items() %}
+                {% if value.startswith("http") %}
+                    <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
+                        <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value }}">
+                    </div></td>
+                {% else %}
+                    <td>{{ value }}</td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
 
 {% endblock %}

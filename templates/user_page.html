@@ -2,45 +2,62 @@
  
 {% block content %}
     <h1>{{ username }}</h1>
-    <h2>Описание: {{ description }}</h2>
+    <h2>API Key: {{ api_key }}</h2>
+    <h2>Client ID: {{ client_id }}</h2>
     {% if success_pass == True %}
         <div class="alert alert-success" role="alert">
             Password changed!
         </div>
     {% endif %}
-    {% if success_desc == True %}
+    {% if success_api_key == True %}
         <div class="alert alert-success" role="alert">
-            Description updated!
+            API Key updated!
         </div>
     {% endif %}
-    {% if owner == True %}
-        <a href="/delete_user/{{ user_id }}" class="btn btn-danger" role="button">Delete my account</a>
-        <a href="/logout" class="btn btn-danger" role="button">Log out</a>
-        <form action="" method="post" novalidate>
-            {{ form.hidden_tag() }}
-            <p>
-                {{ form.new_password.label }}<br>
-                {{ form.new_password }}<br>
-                {% for error in form.new_password.errors %}
-                    <div class="alert alert-danger" role="alert">
-                        {{ error }}
-                    </div>
-                {% endfor %}
-            </p>
-            <p>{{ form.submit() }}</p>
-        </form>
-        <form action="" method="post" novalidate>
-            {{ form1.hidden_tag() }}
-            <p>
-                {{ form1.new_description.label }}<br>
-                {{ form1.new_description }}<br>
-                {% for error in form1.new_description.errors %}
-                    <div class="alert alert-danger" role="alert">
-                        {{ error }}
-                    </div>
-                {% endfor %}
-            </p>
-            <p>{{ form1.submit() }}</p>
-        </form>
+    {% if success_client_id == True %}
+        <div class="alert alert-success" role="alert">
+            Client ID updated!
+        </div>
     {% endif %}
+    <a href="/delete_user" class="btn btn-danger" role="button">Delete my account</a>
+    <a href="/logout" class="btn btn-danger" role="button">Log out</a>
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.new_password.label }}<br>
+            {{ form.new_password }}<br>
+            {% for error in form.new_password.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </p>
+        <p>{{ form.submit() }}</p>
+    </form>
+    <form action="" method="post" novalidate>
+        {{ form1.hidden_tag() }}
+        <p>
+            {{ form1.new_apikey.label }}<br>
+            {{ form1.new_apikey }}<br>
+            {% for error in form1.new_apikey.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </p>
+        <p>{{ form1.submit() }}</p>
+    </form>
+    <form action="" method="post" novalidate>
+        {{ form2.hidden_tag() }}
+        <p>
+            {{ form2.new_clientid.label }}<br>
+            {{ form2.new_clientid }}<br>
+            {% for error in form2.new_clientid.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </p>
+        <p>{{ form2.submit() }}</p>
+    </form>
 {% endblock %}
