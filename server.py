@@ -8,6 +8,7 @@ from flask import Flask
 #from RESTful import *
 from ozon_api import get_postings_info
 from json import load, dump
+from threading import Thread
 
 db = DB()
 app = Flask(__name__)
@@ -22,6 +23,16 @@ def not_found(error):
     return """<h1>404?</h1>"""
 
 
+def check_postings(uid):
+    try:
+        with open("postings_" + str(uid) + '.json', 'r+', encoding='utf-8') as f:
+            s = load(f)
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+
 @app.route('/')
 @app.route('/index')
 def index():
@@ -30,12 +41,19 @@ def index():
         return redirect('/start')
     if session['api_key'] == '-' or session['client_id'] == '-':
         return render_template('no_apikey.html')
-    if 'postings_data' not in session or not session["postings_data"]:
+    session["postings_data"] = check_postings(session["user_id"])
+    if not session["postings_data"]:
         return redirect("/upgrade")
     with open("postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
         s = load(f)
     return render_template('index.html', username=session['username'],
                            postings_data=s)
+
+
+def get_postings():
+    postings_data = get_postings_info(session["api_key"], session['client_id'])
+    with open("postings_" + str(session["user_id"]) + '.json', "w+", encoding='utf-8') as f:
+        dump(postings_data, f, indent=4, ensure_ascii=False)
 
 
 @app.route('/updater')
@@ -45,11 +63,10 @@ def updater():
     if session['api_key'] == '-' or session['client_id'] == '-':
         return render_template('no_apikey.html')
     try:
-        postings_data = get_postings_info(session["api_key"], session['client_id'])
-        session["postings_data"] = True
-        with open("postings_" + str(session["user_id"]) + '.json', "w+", encoding='utf-8') as f:
-            dump(postings_data, f, indent=4, ensure_ascii=False)
-        return redirect('/index')
+        thread = Thread(target=get_postings, args=())
+        thread.daemon = True
+        thread.start()
+        return render_template("loading.html")
     except Exception:
         return render_template('no_apikey.html')
 
@@ -94,13 +111,7 @@ def login():
             session['user_id'] = success[1]
             session['api_key'] = success[2]
             session['client_id'] = success[3]
-            try:
-                with open("postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
-                    s = load(f)
-                session["postings_data"] = True
-            except Exception as e:
-                print(e)
-                session["postings_data"] = False
+            session["postings_data"] = check_postings(session["user_id"])
             return redirect("/index")
         return render_template('login.html', title='Авторизация', form=form, attempt=True)
     return render_template('login.html', title='Авторизация', form=form)
