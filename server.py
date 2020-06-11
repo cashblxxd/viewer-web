@@ -52,7 +52,7 @@ def index():
 
 
 def get_postings():
-    postings_data = get_postings_info(session["api_key"], session['client_id'])
+    postings_data = get_postings_info(session["api_key"], session['client_id'], session['user_id'])
     with open("postings_" + str(session["user_id"]) + '.json', "w+", encoding='utf-8') as f:
         dump(postings_data, f, indent=4, ensure_ascii=False)
 

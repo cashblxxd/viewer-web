@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timedelta
 from zipfile import ZipFile
 import dateutil.relativedelta
+from json import load
 
 
 def get_items_ids(shop_api_key, client_id):
@@ -236,12 +237,20 @@ def get_posting_info(r, shop_api_key, client_id):
     return result
 
 
-def get_postings_info(shop_api_key, client_id):
+def get_postings_info(shop_api_key, client_id, uid='-'):
     print("Starting...")
-    postings = [get_posting_info(i, shop_api_key, client_id) for i in get_postings_list(shop_api_key, client_id)]
-    print("Success lol")
-    pprint(postings)
-    return postings
+    s = {}
+    try:
+        with open("postings_" + str(uid) + '.json', 'r+', encoding='utf-8') as f:
+            s = load(f)
+    except Exception as e:
+        print(e)
+    d = set()
+    for i in s:
+        d.add(s["Номер заказа"])
+    postings_list = [i for i in get_postings_list(shop_api_key, client_id) if i not in d]
+    postings_add = [get_posting_info(i, shop_api_key, client_id) for i in postings_list]
+    return postings_add + postings_list
 
 
 def dump_postings_csv(shop_api_key, client_id, name):

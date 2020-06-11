@@ -1,6 +1,10 @@
 {% extends "base.html" %}
  
 {% block content %}
+    <link rel="Stylesheet" href="https://cdn.datatables.net/1.10.12/css/jquery.dataTables.min.css"/>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.3.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
+
     <style>
     .zoom {
         transition: transform .1s;
@@ -40,22 +44,50 @@
         a.addEventListener("click", f1)
 
     </script>
+    <script>
+        $(document).ready(function() {
+            $('#MyTable').DataTable( {
+                initComplete: function () {
+                    this.api().columns().every( function () {
+                        var column = this;
+                        var select = $('<select><option value=""></option></select>')
+                            .appendTo( $(column.footer()).empty() )
+                            .on( 'change', function () {
+                                var val = $.fn.dataTable.util.escapeRegex(
+                                    $(this).val()
+                                );
+                                //to select and search from grid
+                                column
+                                    .search( val ? '^'+val+'$' : '', true, false )
+                                    .draw();
+                            } );
+
+                        column.data().unique().sort().each( function ( d, j ) {
+                            select.append( '<option value="'+d+'">'+d+'</option>' )
+                        } );
+                    } );
+                }
+            } );
+        } );
+    </script>
     <div id="myDIV" style="visibility:hidden">
         Нажмите на <a href="/updater" target="_blank">ссылку</a> и не закрывайте вкладку, пока страница не обновится. Спасибо!
     </div>
     <form name="myForm" action="" method="post" onsubmit="">
     <input type=submit value=Next>
-    <table style="width:95%">
-        <tr>
-            <th><input type="checkbox" value="all" class="danger" name='my_checkbox'></th>
-            <th>Принят в обработку</th>
-            <th>Номер заказа</th>
-            <th>Номер отправления</th>
-            <th>Детали отправления</th>
-            <th>Картинка</th>
-            <th>Стоимость</th>
-            <th>Дата отгрузки</th>
-        </tr>
+    <table id="MyTable" class="display" cellspacing="0" width="95%">
+        <thead>
+            <tr>
+                <th class="th-sm"><input type="checkbox" value="all" class="danger" name='my_checkbox'></th>
+                <th class="th-sm">Принят в обработку</th>
+                <th class="th-sm">Номер заказа</th>
+                <th class="th-sm">Номер отправления</th>
+                <th class="th-sm">Детали отправления</th>
+                <th class="th-sm">Картинка</th>
+                <th class="th-sm">Стоимость</th>
+                <th class="th-sm">Дата отгрузки</th>
+            </tr>
+        </thead>
         {% for item in postings_data %}
         <tr>
             <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='my_checkbox'></td>
