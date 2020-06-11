@@ -1,0 +1,5 @@
+sqlite3
+flask_wtf
+requests
+flask
+werkzeug
