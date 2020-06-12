@@ -65,7 +65,7 @@ def get_item_state(state):
 
 
 def parse_date_short(s):
-    print(s)
+    #print(s)
     if not s:
         return "-"
     date = datetime.strptime(s, '%Y-%m-%dT%H:%M:%SZ')
@@ -143,7 +143,7 @@ def dump_items_csv(shop_api_key, client_id, name):
     print("Dumped successfully.")
 
 
-def get_postings_list(shop_api_key, client_id):
+def get_postings_list(shop_api_key, client_id, status=None):
     print("Getting postings list...")
     init_time = time.time()
     headers = {
@@ -163,15 +163,17 @@ def get_postings_list(shop_api_key, client_id):
             "barcodes": False
         }
     }
+    if status:
+        payload["filter"]["status"] = status
     postings = []
     r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/list", headers=headers, json=payload).json()["result"]
     while r:
         postings.extend(r)
         payload["offset"] += 50
-        print("Offset:", payload["offset"], "time:", str(time.time() - init_time), "s")
+        #print("Offset:", payload["offset"], "time:", str(time.time() - init_time), "s")
         r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/list", headers=headers, json=payload).json()["result"]
     print("Got", len(postings), "in:", str(time.time() - init_time), "s")
-    pprint(postings)
+    #pprint(postings)
     return postings
 
 
@@ -197,7 +199,7 @@ def get_details(product):
 
 
 def get_product_image(sku, shop_api_key, client_id):
-    print("Getting image for", sku, end="... ")
+    #print("Getting image for", sku, end="... ")
     try:
         headers = {
             'Client-Id': str(client_id),
@@ -208,10 +210,10 @@ def get_product_image(sku, shop_api_key, client_id):
             "sku": sku,
         }
         r = requests.post(url="http://api-seller.ozon.ru/v2/product/info", headers=headers, json=payload).json()["result"]
-        print("Success")
+        #print("Success")
         return r["images"][0]
     except Exception as e:
-        print("Failed: ", e)
+        #print("Failed: ", e)
         return "https://image.flaticon.com/icons/png/512/1602/1602620.png"
 
 
@@ -224,8 +226,8 @@ def get_price(product):
 
 def get_posting_info(r, shop_api_key, client_id):
     product = r.get("products", [{}])[0]
-    pprint(r)
-    pprint(product)
+    #pprint(r)
+    #pprint(product)
     result = {
         "Принят в обработку": parse_date_short(r.get("in_process_at", "-")),
         "Номер заказа": r.get("order_number", "-"),
@@ -239,26 +241,100 @@ def get_posting_info(r, shop_api_key, client_id):
     return result
 
 
-def get_postings_info(shop_api_key, client_id, uid='-'):
-    print("Starting...")
+def get_postings_info(shop_api_key, client_id, uid='-', status=None):
+    #print("Starting...")
     s = []
     try:
-        with open("postings_" + str(uid) + '.json', 'r+', encoding='utf-8') as f:
+        with open("postings_" + str(uid) + f'{"_" + status if status else ""}.json', 'r+', encoding='utf-8') as f:
             s = load(f)
+    except Exception as e:
+        print(e)
+    try:
+        print("s:", len(s))
     except Exception as e:
         print(e)
     d = set()
     for i in s:
-        d.add(i["order_number"])
-    postings_add = [get_posting_info(i, shop_api_key, client_id) for i in
-                    [i for i in get_postings_list(shop_api_key, client_id) if i["order_number"] not in d]]
+        d.add(i["Номер отправления"])
+    postings_add = [get_posting_info(i, shop_api_key, client_id) for i in [i for i in get_postings_list(shop_api_key, client_id, status) if i["posting_number"] not in d]]
     #pprint(postings_add)
+    #print("Done")
     return postings_add + s
 
 
+def get_postings_info_awaiting_packaging(shop_api_key, client_id, uid='-'):
+    return get_postings_info(shop_api_key, client_id, uid, status='awaiting_packaging')
+
+
+def get_postings_info_awaiting_deliver(shop_api_key, client_id, uid='-'):
+    return get_postings_info(shop_api_key, client_id, uid, status='awaiting_deliver')
+
+
+def get_postings_info_arbitration(shop_api_key, client_id, uid='-'):
+    return get_postings_info(shop_api_key, client_id, uid, status='arbitration')
+
+
+def get_postings_info_delivering(shop_api_key, client_id, uid='-'):
+    return get_postings_info(shop_api_key, client_id, uid, status='delivering')
+
+
+def get_postings_info_delivered(shop_api_key, client_id, uid='-'):
+    return get_postings_info(shop_api_key, client_id, uid, status='delivered')
+
+
+def get_postings_info_cancelled(shop_api_key, client_id, uid='-'):
+    return get_postings_info(shop_api_key, client_id, uid, status='cancelled')
+
+
+def print_acts(shop_api_key, client_id, user_id):
+    headers = {
+        'Client-Id': str(client_id),
+        'Api-Key': shop_api_key,
+        'Content-Type': 'application/json'
+    }
+    payload = {}
+    r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/act/create", headers=headers, json=payload).json()
+    try:
+        res_id = r["result"]["id"]
+    except Exception as e:
+        print(e)
+        return (False,)
+    ready = False
+    for i in range(100):
+        headers = {
+            'Client-Id': str(client_id),
+            'Api-Key': shop_api_key,
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            "id": res_id
+        }
+        r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/act/check-status",
+                          headers=headers, json=payload).json()["result"]["status"]
+        if r == "error":
+            return (False,)
+        if r == "ready":
+            ready = True
+            break
+        time.sleep(2)
+    if ready:
+        headers = {
+            'Client-Id': str(client_id),
+            'Api-Key': shop_api_key,
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            "id": res_id
+        }
+        r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/act/get-pdf", headers=headers, json=payload)
+        with open(f'./{user_id}/Акт {datetime.now().strftime("%H:%M:%S %d.%m.%Y")}.pdf', 'wb') as f:
+            f.write(r.content)
+
+
 def get_markings(shop_api_key, client_id, posting_numbers, user_id):
+    print("getting:", posting_numbers)
     filenames = []
-    for i in range(0, len(posting_numbers), 20):
+    for i in range(len(posting_numbers)):
         filename = str(client_id) + "_" + str(i) + ".pdf"
         filenames.append(filename)
         headers = {
@@ -267,13 +343,14 @@ def get_markings(shop_api_key, client_id, posting_numbers, user_id):
             'Content-Type': 'application/json'
         }
         payload = {
-            "posting_number": posting_numbers,
+            "posting_number": posting_numbers[i],
         }
         r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/package-label", headers=headers, json=payload)
         try:
             s = r.json()
             if s["error"]["code"] == "POSTINGS_NOT_READY":
-                return False, s["error"]["message"]
+                print("fuck i failed")
+                print(s["error"]["message"])
         except Exception:
             pass
         with open(filename, 'wb') as f:
@@ -282,14 +359,14 @@ def get_markings(shop_api_key, client_id, posting_numbers, user_id):
 
     for pdf in filenames:
         merger.append(pdf)
-
+    print("here")
     path = f'./{user_id}'
     if not os.path.isdir(path):
         os.mkdir(path)
-    merger.write(path + f"/Маркировки {datetime.now().strftime('%H:%M:%S %m.%d.%Y')}.pdf")
+    merger.write(path + f"/Маркировки {datetime.now().strftime('%H:%M:%S %d.%m.%Y')}.pdf")
     merger.close()
-    for path in filenames:
-        os.remove(path)
+    for file in filenames:
+        os.remove(file)
     return (True,)
 
 
