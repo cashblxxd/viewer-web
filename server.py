@@ -8,7 +8,7 @@ from flask import Flask
 #from RESTful import *
 from ozon_api import get_postings_info, get_markings, get_postings_info_awaiting_packaging,\
     get_postings_info_awaiting_deliver, get_postings_info_arbitration, get_postings_info_delivering,\
-    get_postings_info_delivered, get_postings_info_cancelled, print_acts
+    get_postings_info_delivered, get_postings_info_cancelled, print_acts, deliver_all_postings
 from json import load, dump
 from threading import Thread
 from multiprocessing import Process
@@ -27,9 +27,14 @@ def not_found(error):
 
 def check_postings(uid):
     try:
-        with open("postings_" + str(uid) + '.json', 'r+', encoding='utf-8') as f:
-            s = load(f)
-        return True
+        with open(f"{session['user_id']}/postings_" + str(uid) + '.json', 'r+', encoding='utf-8') as f:
+            with open(f"{session['user_id']}/postings_" + str(uid) + '_awaiting_packaging.json', 'r+', encoding='utf-8') as f:
+                with open(f"{session['user_id']}/postings_" + str(uid) + '_awaiting_deliver.json', 'r+', encoding='utf-8') as f:
+                    with open(f"{session['user_id']}/postings_" + str(uid) + '_arbitration.json', 'r+', encoding='utf-8') as f:
+                        with open(f"{session['user_id']}/postings_" + str(uid) + '_delivering.json', 'r+', encoding='utf-8') as f:
+                            with open(f"{session['user_id']}/postings_" + str(uid) + '_delivered.json', 'r+', encoding='utf-8') as f:
+                                with open(f"{session['user_id']}/postings_" + str(uid) + '_cancelled.json', 'r+', encoding='utf-8') as f:
+                                    return True
     except Exception as e:
         print(e)
         return False
@@ -66,10 +71,26 @@ def get_act():
         thread = Process(target=get_acts, args=())
         thread.daemon = True
         thread.start()
-        with open("postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+        with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
             s = load(f)
         return render_template('index.html', username=session['username'],
                                postings_data=s, act_started=True)
+
+
+def deliver_all():
+    deliver_all_postings(session["api_key"], session["client_id"], session["user_id"])
+
+
+@app.route('/deliver', methods=['GET', 'POST'])
+def deliver():
+    with app.app_context():
+        thread = Process(target=deliver_all, args=())
+        thread.daemon = True
+        thread.start()
+        with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+            s = load(f)
+        return render_template('index.html', username=session['username'],
+                               postings_data=s, deliver_started=True)
 
 
 @app.route('/delete/<filename>', methods=['GET', 'POST'])
@@ -90,7 +111,7 @@ def index():
                 thread = Process(target=print_markings, args=(posting_numbers,))
                 thread.daemon = True
                 thread.start()
-                with open("postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+                with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
                     s = load(f)
                 return render_template('index.html', username=session['username'],
                                        postings_data=s, markings_started=True)
@@ -102,19 +123,19 @@ def index():
     session["postings_data"] = check_postings(session["user_id"])
     if not session["postings_data"]:
         return redirect("/upgrade")
-    with open("postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
         s = load(f)
-    with open("postings_" + str(session["user_id"]) + '_awaiting_packaging.json', 'r+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_awaiting_packaging.json', 'r+', encoding='utf-8') as f:
         postings_data_awaiting_packaging = load(f)
-    with open("postings_" + str(session["user_id"]) + '_awaiting_deliver.json', 'r+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_awaiting_deliver.json', 'r+', encoding='utf-8') as f:
         postings_data_awaiting_deliver = load(f)
-    with open("postings_" + str(session["user_id"]) + '_arbitration.json', 'r+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_arbitration.json', 'r+', encoding='utf-8') as f:
         postings_data_arbitration = load(f)
-    with open("postings_" + str(session["user_id"]) + '_delivering.json', 'r+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_delivering.json', 'r+', encoding='utf-8') as f:
         postings_data_delivering = load(f)
-    with open("postings_" + str(session["user_id"]) + '_delivered.json', 'r+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_delivered.json', 'r+', encoding='utf-8') as f:
         postings_data_delivered = load(f)
-    with open("postings_" + str(session["user_id"]) + '_cancelled.json', 'r+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_cancelled.json', 'r+', encoding='utf-8') as f:
         postings_data_cancelled = load(f)
     return render_template('index.html', username=session['username'],
                            postings_data=s, postings_data_awaiting_packaging=postings_data_awaiting_packaging,
@@ -126,26 +147,29 @@ def index():
 
 
 def get_postings():
+    path = f'./{session["user_id"]}'
+    if not os.path.isdir(path):
+        os.mkdir(path)
     postings_data = get_postings_info(session["api_key"], session['client_id'], session['user_id'])
-    with open("postings_" + str(session["user_id"]) + '.json', "w+", encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', "w+", encoding='utf-8') as f:
         dump(postings_data, f, indent=4, ensure_ascii=False)
     postings_data = get_postings_info_awaiting_packaging(session["api_key"], session['client_id'], session['user_id'])
-    with open("postings_" + str(session["user_id"]) + '_awaiting_packaging.json', 'w+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_awaiting_packaging.json', 'w+', encoding='utf-8') as f:
         dump(postings_data, f, indent=4, ensure_ascii=False)
     postings_data = get_postings_info_awaiting_deliver(session["api_key"], session['client_id'], session['user_id'])
-    with open("postings_" + str(session["user_id"]) + '_awaiting_deliver.json', 'w+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_awaiting_deliver.json', 'w+', encoding='utf-8') as f:
         dump(postings_data, f, indent=4, ensure_ascii=False)
     postings_data = get_postings_info_arbitration(session["api_key"], session['client_id'], session['user_id'])
-    with open("postings_" + str(session["user_id"]) + '_arbitration.json', 'w+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_arbitration.json', 'w+', encoding='utf-8') as f:
         dump(postings_data, f, indent=4, ensure_ascii=False)
     postings_data = get_postings_info_delivering(session["api_key"], session['client_id'], session['user_id'])
-    with open("postings_" + str(session["user_id"]) + '_delivering.json', 'w+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_delivering.json', 'w+', encoding='utf-8') as f:
         dump(postings_data, f, indent=4, ensure_ascii=False)
     postings_data = get_postings_info_delivered(session["api_key"], session['client_id'], session['user_id'])
-    with open("postings_" + str(session["user_id"]) + '_delivered.json', 'w+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_delivered.json', 'w+', encoding='utf-8') as f:
         dump(postings_data, f, indent=4, ensure_ascii=False)
     postings_data = get_postings_info_cancelled(session["api_key"], session['client_id'], session['user_id'])
-    with open("postings_" + str(session["user_id"]) + '_cancelled.json', 'w+', encoding='utf-8') as f:
+    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '_cancelled.json', 'w+', encoding='utf-8') as f:
         dump(postings_data, f, indent=4, ensure_ascii=False)
 
 
@@ -157,6 +181,7 @@ def updater():
         return render_template('no_apikey.html')
     try:
         with app.app_context():
+
             thread = Process(target=get_postings, args=())
             thread.daemon = True
             thread.start()

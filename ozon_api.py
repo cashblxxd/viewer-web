@@ -194,8 +194,8 @@ def get_sum(price_str, q_str):
     return str(float(price_str) * float(q_str))
 
 
-def get_details(product):
-    return f'{product.get("quantity", "-")} шт. Артикул: {product.get("offer_id", "-")}\n{product.get("name", "-")}'
+def get_details(products):
+    return '\n'.join(f'{product.get("quantity", "-")} шт. Артикул: {product.get("offer_id", "-")} {product.get("name", "-")}' for product in products)
 
 
 def get_product_image(sku, shop_api_key, client_id):
@@ -217,35 +217,69 @@ def get_product_image(sku, shop_api_key, client_id):
         return "https://image.flaticon.com/icons/png/512/1602/1602620.png"
 
 
-def get_price(product):
-    s = str(product.get("price", "-"))
-    if s == '-':
-        return '-'
-    return str(float(s))
+def get_prices_sum(products):
+    summ = 0
+    for product in products:
+        s = product.get("price", "-")
+        if s != '-':
+            summ += float(s)
+    return str(summ)
 
 
-def get_posting_info(r, shop_api_key, client_id):
-    product = r.get("products", [{}])[0]
+def get_posting_info(r, shop_api_key, client_id, status=None):
+    products = r.get("products", [{}])
     #pprint(r)
     #pprint(product)
     result = {
         "Принят в обработку": parse_date_short(r.get("in_process_at", "-")),
         "Номер заказа": r.get("order_number", "-"),
         "Номер отправления": r.get("posting_number", "-"),
-        "Детали отправления": get_details(product),
-        "Картинка": get_product_image(product.get("sku", "-"), shop_api_key, client_id),
-        "Стоимость": get_price(product),
+        "Детали отправления": get_details(products),
+        "Картинка": get_product_image(products[0].get("sku", "-"), shop_api_key, client_id),
+        "Стоимость": get_prices_sum(products),
         # Стоимость !!!!!!!!!!!!!!!!!!
         "Дата отгрузки": parse_date_short(r.get("shipment_date", "-")),
     }
+    if status == "awaiting_packaging":
+        result["origin"] = r
     return result
+
+
+def deliver_all_postings(shop_api_key, client_id, uid):
+    try:
+        with open(f"{uid}/postings_" + str(uid) + '_awaiting_packaging.json', 'r+', encoding='utf-8') as f:
+            s = load(f)
+    except Exception as e:
+        return
+    for posting in s:
+        headers = {
+            'Client-Id': str(client_id),
+            'Api-Key': shop_api_key,
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            "packages": [{"items": [
+                {
+                    "quantity": i["quantity"],
+                    "sku": i["sku"]
+                } for i in posting["origin"]["products"]
+            ]}],
+            "posting_number": posting["origin"]["posting_number"]
+        }
+        items = posting["origin"]["products"]
+        for item in items:
+            pass
+    r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/act/check-status",
+                      headers=headers, json=payload).json()["result"]["status"]
+
 
 
 def get_postings_info(shop_api_key, client_id, uid='-', status=None):
     #print("Starting...")
     s = []
+    print(((datetime.now() + dateutil.relativedelta.relativedelta(months=-1)).replace(day=1)))
     try:
-        with open("postings_" + str(uid) + f'{"_" + status if status else ""}.json', 'r+', encoding='utf-8') as f:
+        with open(f"{uid}/postings_" + str(uid) + f'{"_" + status if status else ""}.json', 'r+', encoding='utf-8') as f:
             s = load(f)
     except Exception as e:
         print(e)
@@ -254,12 +288,16 @@ def get_postings_info(shop_api_key, client_id, uid='-', status=None):
     except Exception as e:
         print(e)
     d = set()
+    s = [i for i in s if datetime.strptime(i["Принят в обработку"], '%d-%m-%Y %H:%M:%S') >= ((datetime.now() + dateutil.relativedelta.relativedelta(months=-1)).replace(day=1))]
     for i in s:
         d.add(i["Номер отправления"])
-    postings_add = [get_posting_info(i, shop_api_key, client_id) for i in [i for i in get_postings_list(shop_api_key, client_id, status) if i["posting_number"] not in d]]
+    postings_add = [get_posting_info(i, shop_api_key, client_id, status) for i in [i for i in get_postings_list(shop_api_key, client_id, status) if i["posting_number"] not in d]]
     #pprint(postings_add)
     #print("Done")
-    return postings_add + s
+    result = postings_add + s
+    s = set(i["Принят в обработку"] for i in result)
+    #pprint(s)
+    return result
 
 
 def get_postings_info_awaiting_packaging(shop_api_key, client_id, uid='-'):
