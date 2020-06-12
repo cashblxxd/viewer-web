@@ -335,15 +335,13 @@ def get_markings(shop_api_key, client_id, posting_numbers, user_id):
     print("getting:", posting_numbers)
     filenames = []
     for i in range(len(posting_numbers)):
-        filename = str(client_id) + "_" + str(i) + ".pdf"
-        filenames.append(filename)
         headers = {
             'Client-Id': str(client_id),
             'Api-Key': shop_api_key,
             'Content-Type': 'application/json'
         }
         payload = {
-            "posting_number": posting_numbers[i],
+            "posting_number": [posting_numbers[i]],
         }
         r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/package-label", headers=headers, json=payload)
         try:
@@ -351,8 +349,11 @@ def get_markings(shop_api_key, client_id, posting_numbers, user_id):
             if s["error"]["code"] == "POSTINGS_NOT_READY":
                 print("fuck i failed")
                 print(s["error"]["message"])
+                continue
         except Exception:
             pass
+        filename = str(client_id) + "_" + str(i) + ".pdf"
+        filenames.append(filename)
         with open(filename, 'wb') as f:
             f.write(r.content)
     merger = PdfFileMerger()
