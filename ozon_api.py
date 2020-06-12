@@ -266,11 +266,8 @@ def deliver_all_postings(shop_api_key, client_id, uid):
             ]}],
             "posting_number": posting["origin"]["posting_number"]
         }
-        items = posting["origin"]["products"]
-        for item in items:
-            pass
-    r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/act/check-status",
-                      headers=headers, json=payload).json()["result"]["status"]
+        print(requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/ship",
+                            headers=headers, json=payload).json())
 
 
 
@@ -332,6 +329,7 @@ def print_acts(shop_api_key, client_id, user_id):
     }
     payload = {}
     r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/act/create", headers=headers, json=payload).json()
+    pprint(r)
     try:
         res_id = r["result"]["id"]
     except Exception as e:

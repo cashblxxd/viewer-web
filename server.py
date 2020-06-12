@@ -49,7 +49,7 @@ def download_center():
     path = f'./{session["user_id"]}'
     if not os.path.isdir(path):
         os.mkdir(path)
-    files = os.listdir(path)
+    files = [i for i in os.listdir(path) if i.startswith("Маркировки") or i.startswith("Акты")]
     return render_template('downloads.html', files=files, is_empty=(len(files) == 0))
 
 
