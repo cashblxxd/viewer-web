@@ -317,9 +317,11 @@
                         <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='posting_labels'></td>
                         {% for key, value in item.items() %}
                             {% if key != "origin" %}
-                                {% if value.startswith("http") %}
+                                {% if key == "Картинка" %}
                                     <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
-                                        <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value }}">
+                                        {% for k in value %}
+                                            <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ k }}">
+                                        {% endfor %}
                                     </div></td>
                                 {% else %}
                                     <td style="white-space:pre-wrap; word-wrap:break-word; height: 80px">{{ value }}</td>
@@ -357,9 +359,11 @@
                         <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='posting_labels'></td>
                         {% for key, value in item.items() %}
                             {% if key != "origin" %}
-                                {% if value.startswith("http") %}
+                                {% if key == "Картинка" %}
                                     <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
-                                        <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value }}">
+                                        {% for i in range(products|length) %}
+                                            <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value[i] }}">
+                                        {% endfor %}
                                     </div></td>
                                 {% else %}
                                     <td style="white-space:pre-wrap; word-wrap:break-word; height: 80px">{{ value }}</td>
@@ -396,9 +400,11 @@
                         <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='posting_labels'></td>
                         {% for key, value in item.items() %}
                             {% if key != "origin" %}
-                                {% if value.startswith("http") %}
+                                {% if key == "Картинка" %}
                                     <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
-                                        <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value }}">
+                                        {% for i in range(products|length) %}
+                                            <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value[i] }}">
+                                        {% endfor %}
                                     </div></td>
                                 {% else %}
                                     <td style="white-space:pre-wrap; word-wrap:break-word; height: 80px">{{ value }}</td>
@@ -435,9 +441,11 @@
                         <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='posting_labels'></td>
                         {% for key, value in item.items() %}
                             {% if key != "origin" %}
-                                {% if value.startswith("http") %}
+                                {% if key == "Картинка" %}
                                     <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
-                                        <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value }}">
+                                        {% for i in range(products|length) %}
+                                            <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value[i] }}">
+                                        {% endfor %}
                                     </div></td>
                                 {% else %}
                                     <td style="white-space:pre-wrap; word-wrap:break-word; height: 80px">{{ value }}</td>
@@ -474,9 +482,11 @@
                         <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='posting_labels'></td>
                         {% for key, value in item.items() %}
                             {% if key != "origin" %}
-                                {% if value.startswith("http") %}
+                                {% if key == "Картинка" %}
                                     <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
-                                        <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value }}">
+                                        {% for i in range(products|length) %}
+                                            <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value[i] }}">
+                                        {% endfor %}
                                     </div></td>
                                 {% else %}
                                     <td style="white-space:pre-wrap; word-wrap:break-word; height: 80px">{{ value }}</td>
@@ -513,9 +523,11 @@
                         <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='posting_labels'></td>
                         {% for key, value in item.items() %}
                             {% if key != "origin" %}
-                                {% if value.startswith("http") %}
+                                {% if key == "Картинка" %}
                                     <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
-                                        <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value }}">
+                                        {% for i in range(products|length) %}
+                                            <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value[i] }}">
+                                        {% endfor %}
                                     </div></td>
                                 {% else %}
                                     <td style="white-space:pre-wrap; word-wrap:break-word; height: 80px">{{ value }}</td>
@@ -552,9 +564,11 @@
                         <td><input type="checkbox" value={{ item["Номер отправления"] }} class="danger" name='posting_labels'></td>
                         {% for key, value in item.items() %}
                             {% if key != "origin" %}
-                                {% if value.startswith("http") %}
+                                {% if key == "Картинка" %}
                                     <td style="width: 50px; height: 50px"><div class="img-container"> <!-- Block parent element -->
-                                        <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value }}">
+                                        {% for i in range(products|length) %}
+                                            <img style="display:block;" width="100%" height="8%" class="zoom" src="{{ value[i] }}">
+                                        {% endfor %}
                                     </div></td>
                                 {% else %}
                                     <td style="white-space:pre-wrap; word-wrap:break-word; height: 80px">{{ value }}</td>

@@ -235,7 +235,8 @@ def get_posting_info(r, shop_api_key, client_id, status=None):
         "Номер заказа": r.get("order_number", "-"),
         "Номер отправления": r.get("posting_number", "-"),
         "Детали отправления": get_details(products),
-        "Картинка": get_product_image(products[0].get("sku", "-"), shop_api_key, client_id),
+        "Картинка": [get_product_image(products[i].get("sku", "-"), shop_api_key, client_id)
+                     for i in range(len(products))],
         "Стоимость": get_prices_sum(products),
         # Стоимость !!!!!!!!!!!!!!!!!!
         "Дата отгрузки": parse_date_short(r.get("shipment_date", "-")),

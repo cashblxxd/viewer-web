@@ -64,6 +64,17 @@ def get_download(filename):
 def get_acts():
     print_acts(session["api_key"], session["client_id"], session["user_id"])
 
+'''
+<style>
+        .zoom {
+        transition: transform .1s;
+    }
+    .zoom:hover {
+        transform: scale(5);
+    }
+    </style>
+'''
+
 
 @app.route('/get_act', methods=['GET', 'POST'])
 def get_act():
