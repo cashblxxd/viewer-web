@@ -83,7 +83,6 @@
     </script>
     <h1>Отправления с моего склада</h1>
     <button onclick="location.href='/get_act'" type="button" class="btn btn-success">Распечатать акты</button>
-    <button onclick="location.href='/deliver'" type="button" class="btn btn-primary">Собрать все</button>
     {% if act_started == True %}
         <div class="alert alert-success" role="alert">
             Акт формируется, зайдите в Загрузки
@@ -337,7 +336,8 @@
         <form method="post">
             <p>
 
-                <input type=submit value="Распечатать маркировки">
+                <input type=submit name="action" value="Распечатать маркировки">
+                <button type=submit name="action" value="Собрать выбранные" class="btn btn-primary">Собрать выбранные</button>
             </p>
             <table id="MyTable1" class="display" cellspacing="0" width="100%">
                 <thead>

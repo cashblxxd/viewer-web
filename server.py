@@ -8,7 +8,7 @@ from flask import Flask
 #from RESTful import *
 from ozon_api import get_postings_info, get_markings, get_postings_info_awaiting_packaging,\
     get_postings_info_awaiting_deliver, get_postings_info_arbitration, get_postings_info_delivering,\
-    get_postings_info_delivered, get_postings_info_cancelled, print_acts, deliver_all_postings
+    get_postings_info_delivered, get_postings_info_cancelled, print_acts, deliver_selected_postings
 from json import load, dump
 from threading import Thread
 from multiprocessing import Process
@@ -77,20 +77,9 @@ def get_act():
                                postings_data=s, act_started=True)
 
 
-def deliver_all():
-    deliver_all_postings(session["api_key"], session["client_id"], session["user_id"])
-
-
-@app.route('/deliver', methods=['GET', 'POST'])
-def deliver():
-    with app.app_context():
-        thread = Process(target=deliver_all, args=())
-        thread.daemon = True
-        thread.start()
-        with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
-            s = load(f)
-        return render_template('index.html', username=session['username'],
-                               postings_data=s, deliver_started=True)
+def deliver_selected(posting_numbers):
+    print(posting_numbers)
+    deliver_selected_postings(session["api_key"], session["client_id"], session["user_id"], posting_numbers)
 
 
 @app.route('/delete/<filename>', methods=['GET', 'POST'])
@@ -108,13 +97,22 @@ def index():
         print(posting_numbers)
         if posting_numbers:
             with app.app_context():
-                thread = Process(target=print_markings, args=(posting_numbers,))
-                thread.daemon = True
-                thread.start()
-                with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
-                    s = load(f)
-                return render_template('index.html', username=session['username'],
-                                       postings_data=s, markings_started=True)
+                if request.form['action'] == 'Распечатать маркировки':
+                    thread = Process(target=print_markings, args=(posting_numbers,))
+                    thread.daemon = True
+                    thread.start()
+                    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+                        s = load(f)
+                    return render_template('index.html', username=session['username'],
+                                           postings_data=s, markings_started=True)
+                elif request.form['action'] == 'Собрать выбранные':
+                    thread = Process(target=deliver_selected, args=(posting_numbers,))
+                    thread.daemon = True
+                    thread.start()
+                    with open(f"{session['user_id']}/postings_" + str(session["user_id"]) + '.json', 'r+', encoding='utf-8') as f:
+                        s = load(f)
+                    return render_template('index.html', username=session['username'],
+                                           postings_data=s, deliver_started=True)
     print("!!!!!!!!!!!")
     if 'username' not in session:
         return redirect('/start')

@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timedelta
 from zipfile import ZipFile
 import dateutil.relativedelta
-from json import load
+from json import load, dump
 from PyPDF2 import PdfFileMerger
 import os
 
@@ -245,30 +245,53 @@ def get_posting_info(r, shop_api_key, client_id, status=None):
     return result
 
 
-def deliver_all_postings(shop_api_key, client_id, uid):
+def deliver_selected_postings(shop_api_key, client_id, uid, posting_numbers):
     try:
         with open(f"{uid}/postings_" + str(uid) + '_awaiting_packaging.json', 'r+', encoding='utf-8') as f:
             s = load(f)
-    except Exception as e:
+    except Exception:
         return
+    numbers = set(posting_numbers)
+    postings = set()
     for posting in s:
-        headers = {
-            'Client-Id': str(client_id),
-            'Api-Key': shop_api_key,
-            'Content-Type': 'application/json'
-        }
-        payload = {
-            "packages": [{"items": [
-                {
-                    "quantity": i["quantity"],
-                    "sku": i["sku"]
-                } for i in posting["origin"]["products"]
-            ]}],
-            "posting_number": posting["origin"]["posting_number"]
-        }
-        print(requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/ship",
-                            headers=headers, json=payload).json())
-
+        if posting["origin"]["posting_number"] in numbers:
+            headers = {
+                'Client-Id': str(client_id),
+                'Api-Key': shop_api_key,
+                'Content-Type': 'application/json'
+            }
+            payload = {
+                "packages": [{"items": [
+                    {
+                        "quantity": i["quantity"],
+                        "sku": i["sku"]
+                    } for i in posting["origin"]["products"]
+                ]}],
+                "posting_number": posting["origin"]["posting_number"]
+            }
+            r = requests.post(url="http://api-seller.ozon.ru/v2/posting/fbs/ship", headers=headers, json=payload).json()
+            if "result" in r:
+                postings.add(posting["origin"]["posting_number"])
+    awaiting_deliver = [i for i in s if i["origin"]["posting_number"] in postings]
+    s = [i for i in s if i["origin"]["posting_number"] not in postings]
+    for i in range(len(awaiting_deliver)):
+        awaiting_deliver[i].pop("origin")
+    try:
+        with open(f"{uid}/postings_" + str(uid) + '_awaiting_packaging.json', 'w+', encoding='utf-8') as f:
+            dump(s, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        print(e)
+    s = []
+    try:
+        with open(f"{uid}/postings_" + str(uid) + '_awaiting_deliver.json', 'r+', encoding='utf-8') as f:
+            s = load(f)
+    except Exception as e:
+        print(e)
+    try:
+        with open(f"{uid}/postings_" + str(uid) + '_awaiting_deliver.json', 'w+', encoding='utf-8') as f:
+            dump(awaiting_deliver + s, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        print(e)
 
 
 def get_postings_info(shop_api_key, client_id, uid='-', status=None):
@@ -285,15 +308,15 @@ def get_postings_info(shop_api_key, client_id, uid='-', status=None):
     except Exception as e:
         print(e)
     d = set()
-    s = [i for i in s if datetime.strptime(i["Принят в обработку"], '%d-%m-%Y %H:%M:%S') >= ((datetime.now() + dateutil.relativedelta.relativedelta(months=-1)).replace(day=1))]
+    postings_list = get_postings_list(shop_api_key, client_id, status)
+    actual_posting_numbers = set(i["posting_number"] for i in postings_list)
+    s = [i for i in s if datetime.strptime(i["Принят в обработку"], '%d-%m-%Y %H:%M:%S') >= ((datetime.now() + dateutil.relativedelta.relativedelta(months=-1)).replace(day=1)) and i["Номер отправления"] in actual_posting_numbers]
     for i in s:
         d.add(i["Номер отправления"])
-    postings_add = [get_posting_info(i, shop_api_key, client_id, status) for i in [i for i in get_postings_list(shop_api_key, client_id, status) if i["posting_number"] not in d]]
+    postings_add = [get_posting_info(i, shop_api_key, client_id, status) for i in [i for i in postings_list if i["posting_number"] not in d]]
     #pprint(postings_add)
     #print("Done")
     result = postings_add + s
-    s = set(i["Принят в обработку"] for i in result)
-    #pprint(s)
     return result
 
 
