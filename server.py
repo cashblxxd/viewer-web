@@ -41,6 +41,7 @@ def check_postings(uid):
 
 
 def print_markings(posting_numbers):
+    print("here", posting_numbers)
     get_markings(session['api_key'], session["client_id"], posting_numbers, session["user_id"])
 
 
@@ -107,8 +108,8 @@ def index():
         posting_numbers = request.form.getlist('posting_labels')
         print(posting_numbers)
         if posting_numbers:
-            with app.app_context():
-                if request.form['action'] == 'Распечатать маркировки':
+            if request.form['action'] == 'Распечатать маркировки':
+                with app.app_context():
                     thread = Process(target=print_markings, args=(posting_numbers,))
                     thread.daemon = True
                     thread.start()
@@ -116,7 +117,8 @@ def index():
                         s = load(f)
                     return render_template('index.html', username=session['username'],
                                            postings_data=s, markings_started=True)
-                elif request.form['action'] == 'Собрать выбранные':
+            elif request.form['action'] == 'Собрать выбранные':
+                with app.app_context():
                     thread = Process(target=deliver_selected, args=(posting_numbers,))
                     thread.daemon = True
                     thread.start()
