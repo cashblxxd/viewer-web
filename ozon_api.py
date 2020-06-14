@@ -11,14 +11,14 @@ from PyPDF2 import PdfFileMerger
 import os
 
 
-def get_items_ids(shop_api_key, client_id):
+def get_items_ids(shop_api_key, client_id, state='ALL'):
     print("Getting ids...")
     headers = {
         'Client-Id': str(client_id),
         'Api-Key': shop_api_key,
         'Content-Type': 'application/json'
     }
-    payload = "{\n  \"filter\": {\n    \"visibility\": \"ALL\"\n  },\n  \"page\": 1,\n  \"page_size\": 1000\n}"
+    payload = "{\n  \"filter\": {\n    \"visibility\": \"" + state + "\"\n  },\n  \"page\": 1,\n  \"page_size\": 1000\n}"
     r = requests.post(url="http://api-seller.ozon.ru/v1/product/list", headers=headers, data=payload)
     return r.json()
 
@@ -90,31 +90,48 @@ def get_item_info(product_id, offer_id, shop_api_key, client_id):
     }
     r = requests.post(url="http://api-seller.ozon.ru/v2/product/info", headers=headers, json=payload).json()["result"]
     #arams = get_product_parameters(product_id, offer_id, shop_api_key, client_id)
-    sku_ids = get_sku(r)
-    result = {
-        "Артикул": offer_id,
+    #sku_ids = get_sku(r)
+    """
+        Артикул 
+Баркод 
+Наименование 
+Статус 
+видимость на сайте 
+Доступно на складе 
+Текущая цена
+'''
         "Ozon Product ID": product_id,
         "FBO OZON SKU ID": sku_ids["fbo"],
         "FBS OZON SKU ID": sku_ids["fbs"],
-        "Barcode": r["barcode"],
-        "Наименование товара": r["name"],
-        "Статус товара": get_item_state(r.get("state", "")),
-        "Видимость на сайте": "да" if r.get("visible", 0) else "нет",
+        
+        
+        
+        
         "Дата создания": parse_date_long(r.get("created_at", "")),
-        "Доступно на складе, шт": str(r.get("stocks", {}).get("present", "")).replace(".", ","),
-        "Текущая цена с учетом скидки, руб.": str(r.get("price", ""),).replace(".", ","),
+        
+        
         "Цена до скидки (перечеркнутая цена), руб.": str(r.get("old_price", "")).replace(".", ","),
         "Цена Premium, руб.": str(r.get("premium_price", "")).replace(".", ","),
         "Рыночная цена, руб.": str(r.get("recommended_price", "")).replace(".", ","),
-        "Размер НДС, %": {"": "0", "0.000000": "0", "0.100000": "10%", "0.200000": "20%", }[str(r.get("vat", "0"))]
+        "Размер НДС, %": {"": "0", "0.000000": "0", "0.100000": "10%", "0.200000": "20%", }[str(r.get("vat", "0"))]'''
+    """
+    result = {
+        "Артикул": offer_id,
+        "Баркод": r["barcode"],
+        "Наименование": r["name"],
+        "Статус": get_item_state(r.get("state", "-")),
+        "Картинка": r["images"],
+        "Видимость на сайте": "да" if r.get("visible", 0) else "нет",
+        "Доступно на складе, шт": r.get("stocks", {}).get("present", "-"),
+        "Текущая цена с учетом скидки, руб.": r.get("price", "-")
     }
     return result
 
 
-def get_items_info(shop_api_key, client_id):
+def get_items_info(shop_api_key, client_id, status="ALL"):
     init_time = time.time()
     print("Getting items...")
-    id_list = get_items_ids(shop_api_key, client_id)["result"]["items"]
+    id_list = get_items_ids(shop_api_key, client_id, status)["result"]["items"]
     print("Got", len(id_list), "items in:", str(time.time() - init_time), "s")
     items = []
     for item in id_list:
@@ -123,6 +140,18 @@ def get_items_info(shop_api_key, client_id):
         print("+" + str(time.time() - init_time), "s")
     print("Got in:", str(time.time() - init_time), "s")
     return items
+
+
+def get_all_items(shop_api_key, client_id, uid):
+    path = f'./{uid}'
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    for i in ["ALL", "VISIBLE", "INVISIBLE", "READY_TO_SUPPLY", "STATE_FAILED"]:
+        items = get_items_info(shop_api_key, client_id, i)
+        with open(f"{uid}/items_{i}.json", 'w+', encoding='utf-8') as f:
+            dump(items, f, indent=4, ensure_ascii=False)
+        print(i, 'done.')
+    print("DONE")
 
 
 def dump_items_csv(shop_api_key, client_id, name):

@@ -8,7 +8,7 @@ from flask import Flask
 #from RESTful import *
 from ozon_api import get_postings_info, get_markings, get_postings_info_awaiting_packaging,\
     get_postings_info_awaiting_deliver, get_postings_info_arbitration, get_postings_info_delivering,\
-    get_postings_info_delivered, get_postings_info_cancelled, print_acts, deliver_selected_postings
+    get_postings_info_delivered, get_postings_info_cancelled, print_acts, deliver_selected_postings, get_all_items
 from json import load, dump
 from threading import Thread
 from multiprocessing import Process
@@ -87,6 +87,67 @@ def get_act():
             s = load(f)
         return render_template('index.html', username=session['username'],
                                postings_data=s, act_started=True)
+
+
+def check_items():
+    try:
+        with open(f"{session['user_id']}/items_ALL.json", 'r+', encoding='utf-8') as f:
+            with open(f"{session['user_id']}/items_VISIBLE.json", 'r+', encoding='utf-8') as f:
+                with open(f"{session['user_id']}/items_INVISIBLE.json", 'r+', encoding='utf-8') as f:
+                    with open(f"{session['user_id']}/items_READY_TO_SUPPLY.json", 'r+', encoding='utf-8') as f:
+                        with open(f"{session['user_id']}/items_STATE_FAILED.json", 'r+', encoding='utf-8') as f:
+                            return True
+    except Exception as e:
+        print(e)
+        return False
+
+
+def get_items():
+    get_all_items(session["api_key"], session["client_id"], session["user_id"])
+
+
+@app.route('/items', methods=['GET', 'POST'])
+def items():
+    if request.method == 'POST':
+        with app.app_context():
+            thread = Process(target=get_items, args=())
+            thread.daemon = True
+            thread.start()
+        return render_template('updating_wait.html')
+    path = f'./{session["user_id"]}'
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    if not check_items():
+        return render_template("update_items.html")
+    try:
+        with open(f"{session['user_id']}/items_ALL.json", 'r+', encoding='utf-8') as f:
+            items_ALL = load(f)
+    except Exception as e:
+        items_ALL = []
+    try:
+        with open(f"{session['user_id']}/items_VISIBLE.json", 'r+', encoding='utf-8') as f:
+            items_VISIBLE = load(f)
+    except Exception as e:
+        items_VISIBLE = []
+    try:
+        with open(f"{session['user_id']}/items_INVISIBLE.json", 'r+', encoding='utf-8') as f:
+            items_INVISIBLE = load(f)
+    except Exception as e:
+        items_INVISIBLE = []
+    try:
+        with open(f"{session['user_id']}/items_READY_TO_SUPPLY.json", 'r+', encoding='utf-8') as f:
+            items_READY_TO_SUPPLY = load(f)
+    except Exception as e:
+        items_READY_TO_SUPPLY = []
+    try:
+        with open(f"{session['user_id']}/items_STATE_FAILED.json", 'r+', encoding='utf-8') as f:
+            items_STATE_FAILED = load(f)
+    except Exception as e:
+        items_STATE_FAILED = []
+    return render_template("items.html", items_ALL=items_ALL, items_VISIBLE=items_VISIBLE,
+                           items_INVISIBLE=items_INVISIBLE, items_READY_TO_SUPPLY=items_READY_TO_SUPPLY,
+                           items_STATE_FAILED=items_STATE_FAILED)
+
 
 
 def deliver_selected(posting_numbers):
